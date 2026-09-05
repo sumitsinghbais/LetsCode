@@ -38,7 +38,7 @@ const userSchema = new Schema({
     },
 
     problemSolved:{  // which problems have been solved by this user
-        type: [string]
+        type: [String]
     },
 
     password:{

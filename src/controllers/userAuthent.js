@@ -2,6 +2,7 @@ const User = require("../models/user");
 const validate = require("../utils/validator");
 const bcrypt = require("bcrypt");
 const jwt = require('jsonwebtoken');
+const redisClient = require("../config/redis");
 
 
 const register = async (req, res) =>{
@@ -16,10 +17,11 @@ const register = async (req, res) =>{
 
         // hash the password
         req.body.password = await bcrypt.hash(password, 10);
+        req.body.role = 'user';   // so that only user can be registered form here not admin
 
         const user = await User.create(req.body);  // it will check emailId already exist or not so no need to do
 
-        const token = jwt.sign({_id: user._id, emailID: emailId},process.env.JWT_KEY, {expiresIn: 60*60});
+        const token = jwt.sign({_id: user._id, emailID: emailId, role:'user'},process.env.JWT_KEY, {expiresIn: 60*60});
         res.cookie('token', token,{maxAge: 60*60*1000});  // 1 hours
         res.status(201).send("User Registered Successfully");
     }
@@ -48,7 +50,7 @@ const login = async (req, res) =>{
         if(!match)
             throw new Error("Invalid credentials");
 
-        const token = jwt.sign({_id: user._id, emailID: emailId},process.env.JWT_KEY, {expiresIn: 60*60});
+        const token = jwt.sign({_id: user._id, emailID: emailId, role:user.role},process.env.JWT_KEY, {expiresIn: 60*60});
         res.cookie('token', token,{maxAge: 60*60*1000});
         res.status(200).send("Logged In Successfully");
     }
@@ -62,11 +64,52 @@ const logout = async (req, res) =>{
 
     try{
 
+        // 1. Validate the token --> done by the middleware
+        const {token} = req.cookies;   // bring the token
+        const payload = jwt.decode(token); // get the payload
+       
+        // 2. Add token to the blocklist of reddis
+        await redisClient.set(`token:${token}`, `Blocked`);
+        await redisClient.expireAt(`token:${token}`, payload.exp);
+
+        res.cookie("token", null, {expires: new Date(Date.now())});
+        res.send("Logged Out Successfully");
+
     }
 
-    catch{
-
+    catch(err){
+        res.status(503).send("Error: "+err);
     }
 
 
 }
+
+const adminRegister = async (req, res) =>{
+
+    try{
+
+        // validate that the given email, password valid or not
+        validate(req.body);
+
+
+        const {firstName, emailId, password} = req.body;
+
+        // hash the password
+        req.body.password = await bcrypt.hash(password, 10);
+        // admin has the access to register admin and user
+       // req.body.role = 'admin';   // so that only user can be registered form here not admin
+
+        const user = await User.create(req.body);  // it will check emailId already exist or not so no need to do
+
+        const token = jwt.sign({_id: user._id, emailID: emailId, role: user.role},process.env.JWT_KEY, {expiresIn: 60*60});
+        res.cookie('token', token,{maxAge: 60*60*1000});  // 1 hours
+        res.status(201).send("User Registered Successfully");
+    }
+
+    catch(err){
+        res.status(400).send("Error: "+err);
+    }
+
+}
+
+module.exports = { register, login, logout, adminRegister};

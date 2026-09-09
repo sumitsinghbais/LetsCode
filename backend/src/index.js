@@ -13,10 +13,14 @@ const cors = require('cors')
 
 // console.log("Hello")
 
-const cors = require("cors");
+
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://lets-code-i6vp.vercel.app"
+];
 
 app.use(cors({
-    origin: "https://lets-code-i6vp.vercel.app",
+    origin: allowedOrigins,
     credentials: true
 }));
 

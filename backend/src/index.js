@@ -13,10 +13,12 @@ const cors = require('cors')
 
 // console.log("Hello")
 
+const cors = require("cors");
+
 app.use(cors({
-    origin: 'http://localhost:5173',
-    credentials: true 
-}))
+    origin: "https://lets-code-4vn9.vercel.app",
+    credentials: true
+}));
 
 app.use(express.json());
 app.use(cookieParser());

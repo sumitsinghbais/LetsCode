@@ -1,5 +1,3 @@
-😂 Haan bhai, meri galti. **Ek hi baar mein complete copy-paste-ready `README.md`** de raha hoon. Bas pura copy karke `README.md` mein paste kar de.
-
 ````markdown
 # 🚀 LetsCode
 

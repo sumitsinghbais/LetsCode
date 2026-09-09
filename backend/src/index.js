@@ -16,7 +16,7 @@ const cors = require('cors')
 const cors = require("cors");
 
 app.use(cors({
-    origin: "https://lets-code-4vn9.vercel.app",
+    origin: "https://lets-code-i6vp.vercel.app",
     credentials: true
 }));
 

@@ -5,75 +5,104 @@ const bcrypt = require("bcrypt");
 const jwt = require('jsonwebtoken');
 const Submission = require("../models/submission")
 
+const register = async (req, res) => {
+    try {
+        validate(req.body);
 
-const register = async (req,res)=>{
-    
-    try{
-        // validate the data;
+        const { firstName, emailId, password } = req.body;
 
-      validate(req.body); 
-      const {firstName, emailId, password}  = req.body;
+        req.body.password = await bcrypt.hash(password, 10);
+        req.body.role = 'user';
 
-      req.body.password = await bcrypt.hash(password, 10);
-      req.body.role = 'user'
-    //
-    
-     const user =  await User.create(req.body);
-     const token =  jwt.sign({_id:user._id , emailId:emailId, role:'user'},process.env.JWT_KEY,{expiresIn: 60*60});
-     const reply = {
-        firstName: user.firstName,
-        emailId: user.emailId,
-        _id: user._id,
-        role:user.role,
+        const user = await User.create(req.body);
+
+        const token = jwt.sign(
+            {
+                _id: user._id,
+                emailId: emailId,
+                role: 'user'
+            },
+            process.env.JWT_KEY,
+            { expiresIn: 60 * 60 }
+        );
+
+        const reply = {
+            firstName: user.firstName,
+            emailId: user.emailId,
+            _id: user._id,
+            role: user.role,
+        };
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            maxAge: 60 * 60 * 1000
+        });
+
+        res.status(201).json({
+            user: reply,
+            message: "Login Successfully"
+        });
     }
-    
-     res.cookie('token',token,{maxAge: 60*60*1000});
-     res.status(201).json({
-        user:reply,
-        message:"Loggin Successfully"
-    })
+    catch (err) {
+        res.status(400).send("Error: " + err);
     }
-    catch(err){
-        res.status(400).send("Error: "+err);
-    }
-}
+};
 
+const login = async (req, res) => {
+    try {
+        const { emailId, password } = req.body;
 
-const login = async (req,res)=>{
-
-    try{
-        const {emailId, password} = req.body;
-
-        if(!emailId)
+        if (!emailId)
             throw new Error("Invalid Credentials");
-        if(!password)
+
+        if (!password)
             throw new Error("Invalid Credentials");
 
-        const user = await User.findOne({emailId});
+        const user = await User.findOne({ emailId });
 
-        const match = await bcrypt.compare(password,user.password);
+        if (!user)
+            throw new Error("Invalid Credentials");
 
-        if(!match)
+        const match = await bcrypt.compare(password, user.password);
+
+        if (!match)
             throw new Error("Invalid Credentials");
 
         const reply = {
             firstName: user.firstName,
             emailId: user.emailId,
             _id: user._id,
-            role:user.role,
-        }
+            role: user.role,
+        };
 
-        const token =  jwt.sign({_id:user._id , emailId:emailId, role:user.role},process.env.JWT_KEY,{expiresIn: 60*60});
-        res.cookie('token',token,{maxAge: 60*60*1000});
-        res.status(201).json({
-            user:reply,
-            message:"Loggin Successfully"
-        })
+        const token = jwt.sign(
+            {
+                _id: user._id,
+                emailId: emailId,
+                role: user.role
+            },
+            process.env.JWT_KEY,
+            { expiresIn: 60 * 60 }
+        );
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            maxAge: 60 * 60 * 1000
+        });
+
+        res.status(200).json({
+            user: reply,
+            message: "Login Successfully"
+        });
     }
-    catch(err){
-        res.status(401).send("Error: "+err);
+    catch (err) {
+        res.status(401).send("Error: " + err);
     }
-}
+};
 
 
 // logOut feature
